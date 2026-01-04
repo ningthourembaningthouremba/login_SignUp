@@ -18,6 +18,15 @@ const userSchema = new mongoose.Schema(
       required: true
     },
 
+    // 🔐 OTP fields
+    otp: String,
+    otpExpire: Date,
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    // 🔁 forgot password
     resetPasswordToken: String,
     resetPasswordExpire: Date
   },

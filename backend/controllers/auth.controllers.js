@@ -2,35 +2,63 @@ import { UserModel } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import sendEmail from "../utils/sendEmail.js";
+import {sendEmail} from "../utils/sendEmail.js";
 
-/* ================= REGISTER ================= */
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
-    const exists = await UserModel.findOne({ email });
-    if (exists) {
-      return res.status(400).json({ success: false, message: "User already exists" });
-    }
+    // const exists = await UserModel.findOne({ email });
+    // if (exists) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "User already exists"
+    //   });
+    // }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await UserModel.create({
-      name,
-      email,
-      password: hashedPassword
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // const user = await UserModel.create({
+    //   name,
+    //   email,
+    //   password: hashedPassword,
+    //   otp,
+    //   otpExpire: Date.now() + 10 * 60 * 1000
+    // });
+
+    // 🔥 TRY sending email, but DON'T crash
+    try {
+      await sendEmail(
+  email,
+  "Verify your account",
+  `<h2>Your OTP is ${otp}</h2>`
+);
+
+    } catch (mailError) {
+      console.error("EMAIL FAILED BUT USER CREATED:", mailError);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "User registered. OTP generated.",
+      otp, // ⚠️ DEV ONLY (remove later)
+      // user: {
+      //   id: user._id,
+      //   email: user.email
+      // }
     });
 
-    res.status(201).json({ 
-      success: true,
-      message: "User registered successfully",
-      user: {...user._doc, password: undefined}
-    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("REGISTER ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
+
 
 /* ================= LOGIN ================= */
 export const login = async (req, res) => {
@@ -125,5 +153,67 @@ export const resetPassword = async (req, res) => {
     res.json({ message: "Password reset successful" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+//verifyOtp controller
+export const verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required"
+      });
+    }
+
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Account already verified"
+      });
+    }
+
+    if (user.otp !== otp.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP"
+      });
+    }
+
+    if (user.otpExpire < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired"
+      });
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpire = undefined;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Account verified successfully"
+    });
+
+  } catch (error) {
+    console.error("VERIFY OTP ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };

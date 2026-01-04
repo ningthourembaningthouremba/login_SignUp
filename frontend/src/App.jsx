@@ -1,15 +1,19 @@
-import {Link} from "react-router-dom";
+import { Link, Route, Routes } from "react-router-dom";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Home from "./pages/Home";
+import EmailVerificationPage from "./pages/EmailVerificationPage";
+import VerifyOtp from "./pages/VerifyOtp";
 function App() {
-  
   return (
-    <>
-     <div>
-      <h1 className="text-gray-500">jihugyfdf</h1>
-      <Link to="/login">Login</Link>
-      <Link to="/signup">Signup</Link>
-     </div>
-    </>
-  )
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/verify-otp" element={<VerifyOtp />} />
+      <Route path="/email-verification" element={<EmailVerificationPage />} />
+    </Routes>
+  );
 }
 
-export default App
+export default App;
